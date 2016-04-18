@@ -1,0 +1,9 @@
+# Build artifacts
+carbon-app
+
+# Auto generated
+/glue/generated_glue.go
+
+# User content
+/app/*
+/app
