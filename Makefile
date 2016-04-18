@@ -26,6 +26,6 @@ clean:
 .PHONY: carbon-app test
 
 # Convenience stuff
-dist: carbon
+dist: carbon-app
 	$(STRIP) carbon-app
 	$(UPX) carbon-app
