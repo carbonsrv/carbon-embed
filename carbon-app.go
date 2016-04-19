@@ -23,6 +23,7 @@ import (
 	"github.com/carbonsrv/carbon/modules/scheduler"
 	"github.com/gin-gonic/gin"
 	"github.com/pmylund/go-cache"
+	"github.com/vifino/golua/lua"
 	"github.com/vifino/luar"
 	"golang.org/x/net/http2"
 )
@@ -201,6 +202,49 @@ func string_from_env(key string, def string) string {
 	return str
 }
 
+// bindhook is the hook that registers our stuff
+func bindhook(L *lua.State) {
+	luar.Register(L, "carbon", luar.Map{
+		"appdata": glue.GetGlue,
+	})
+
+	L.DoString(`
+		local cache_key_prefix = "carbon:lua_module:"
+		local cache_key_app = cache_key_prefix .. "app:"
+		local cache_key_app_location = cache_key_prefix .. "app_location:"
+
+		-- Load from compiled in app
+		local function loadapp(name)
+			local modname = tostring(name):gsub("%.", "/")
+			local location = modname .. ".lua"
+			local src = carbon.appdata(location)
+			if src ~= "" then
+				-- Compile and return the module
+				local f, err = loadstring(src, location)
+				if err then error(err, 0) end
+				kvstore._set(cache_key_app..modname, string.dump(f))
+				kvstore._set(cache_key_app_location..modname, location)
+				return f
+			end
+
+			local location_init = modname .. "/init.lua"
+			local src = carbon.appdata(location_init)
+			if src ~= "" then
+				-- Compile and return the module
+				local f, err = loadstring(src, location)
+				if err then error(err, 0) end
+				kvstore._set(cache_key_app..modname, string.dump(f))
+				kvstore._set(cache_key_app_location..modname, location_init)
+				return f
+			end
+			return "\n\tno app asset '/" .. location .. "' (not compiled in)"..
+				"\n\tno app asset '/" .. location_init .. "' (not compiled in)"
+		end
+
+		table.insert(package.loaders, 3, loadapp)
+	`)
+}
+
 func main() {
 	cfe = cache.New(5*time.Minute, 30*time.Second) // File-Exists Cache
 	kvstore = cache.New(-1, -1)                    // Key-Value Storage
@@ -271,47 +315,7 @@ func main() {
 	}
 	L := luaconf.Setup(args, cfe, webroot, useRecovery, useLogger, false, func(srv *gin.Engine) {
 		serve(srv, en_http, en_https, en_http2, host+":"+strconv.Itoa(port), host+":"+strconv.Itoa(ports), cert, key)
-	})
-
-	luar.Register(L, "carbon", luar.Map{
-		"appdata": glue.GetGlue,
-	})
-
-	L.DoString(`
-		local cache_key_prefix = "carbon:lua_module:"
-		local cache_key_app = cache_key_prefix .. "app:"
-		local cache_key_app_location = cache_key_prefix .. "app_location:"
-
-		-- Load from compiled in app
-		local function loadapp(name)
-			local modname = tostring(name):gsub("%.", "/")
-			local location = modname .. ".lua"
-			local src = carbon.appdata(location)
-			if src ~= "" then
-				-- Compile and return the module
-				local f, err = loadstring(src, location)
-				if err then error(err, 0) end
-				kvstore._set(cache_key_app..modname, string.dump(f))
-				kvstore._set(cache_key_app_location..modname, location)
-				return f
-			end
-
-			local location_init = modname .. "/init.lua"
-			local src = carbon.appdata(location_init)
-			if src ~= "" then
-				-- Compile and return the module
-				local f, err = loadstring(src, location)
-				if err then error(err, 0) end
-				kvstore._set(cache_key_app..modname, string.dump(f))
-				kvstore._set(cache_key_app_location..modname, location_init)
-				return f
-			end
-			return "\n\tno app asset '/" .. location .. "' (not compiled in)"..
-				"\n\tno app asset '/" .. location_init .. "' (not compiled in)"
-		end
-
-		table.insert(package.loaders, 3, loadapp)
-	`)
+	}, bindhook)
 
 	err = L.DoString(script_src)
 	if err != nil {
