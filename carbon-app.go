@@ -59,7 +59,7 @@ func initPhysFS(path string) http.FileSystem {
 	if err != nil {
 		panic(err)
 	}
-	err = physfs.Mount(path, "/", true)
+	err = physfs.Mount(path, "/root", true)
 	if err != nil {
 		panic(err)
 	}
@@ -73,6 +73,7 @@ func initPhysFS(path string) http.FileSystem {
 	return true
 }*/
 func fileRead(file string) (string, error) {
+	file = "/root" + file
 	if physfs.Exists(file) {
 		f, err := filesystem.Open(file)
 		defer f.Close()
@@ -94,9 +95,10 @@ func fileRead(file string) (string, error) {
 	return "", errors.New("no such file or directory.")
 }
 func fileExists(file string) bool {
-	return physfs.Exists(file)
+	return physfs.Exists("/root" + file)
 }
 func cacheFileExists(file string) bool {
+	file = "/root" + file
 	data_tmp, found := cfe.Get(file)
 	if found == false {
 		exists := fileExists(file)
