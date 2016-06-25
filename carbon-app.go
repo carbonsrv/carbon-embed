@@ -1,6 +1,6 @@
 package main
 
-//go:generate go-bindata -nomemcopy -pkg glue -o glue/generated_glue.go -prefix "./app" ./app
+//go:generate make glue/generated_glue.go
 
 import (
 	"bufio"
