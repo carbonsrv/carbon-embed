@@ -12,6 +12,8 @@ Then, simply run `make` and it will build it.
 
 Make sure you also have all the dependencies of carbon installed, including  [`go-bindata`](https://github.com/jteeuwen/go-bindata).
 
+You should probably grab the the Makefile and carbon-app.go and put it in your own apps' dir, relocation the actual source to a sub folder, which is due to be included in the binary.
+
 ## Note
 
 Since there are no carbon command line options anymore, you have to use specific environment variables to control the setup.
