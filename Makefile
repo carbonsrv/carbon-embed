@@ -6,8 +6,9 @@ STRIP?=strip --strip-all
 UPX?=upx --lzma -9
 
 # Vars
-GLUE_DIRS=$(shell find ./app -type d | grep -v ".git")
-GLUE_FILES=$(shell find ./app -type f | grep -v ".git")
+APP_DIR?=./app
+GLUE_DIRS=$(shell find $(APP_DIR) -type d | grep -v ".git")
+GLUE_FILES=$(shell find $(APP_DIR) -type f | grep -v ".git")
 GLUE_OUTPUT=glue/generated_glue.go
 
 all: carbon-app
@@ -15,7 +16,7 @@ carbon-app: $(GLUE_OUTPUT) fmt
 	$(GO) build -o $@ -v ./carbon-app.go
 
 $(GLUE_OUTPUT): $(GLUE_FILES)
-	$(GO_BINDATA) -nomemcopy -o $(GLUE_OUTPUT) -pkg=glue -prefix "./builtin" $(GLUE_DIRS)
+	$(GO_BINDATA) -nomemcopy -o $(GLUE_OUTPUT) -pkg=glue -prefix $(APP_DIR) $(GLUE_DIRS)
 	$(GOFMT) -w -s modules/glue
 
 fmt:
